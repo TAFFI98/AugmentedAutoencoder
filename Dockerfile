@@ -1,8 +1,9 @@
 FROM ubuntu:22.04
-# LABEL about the custom image
 LABEL maintainer="taffi98.at@gmail.com"
 LABEL version="0.1"
 LABEL description="This is a docker immage for LfD thesis"
+SHELL [ "/bin/bash", "--login", "-c" ]
+
 # Set the nvidia container runtime.
 ENV NVIDIA_VISIBLE_DEVICES \
     ${NVIDIA_VISIBLE_DEVICES:-all}
@@ -31,22 +32,22 @@ RUN set -x \
         && echo "user ALL=(ALL) NOPASSWD: ALL " >> /etc/sudoers
 
 # Install miniconda
+ENV HOME /home
 ENV MINICONDA_VERSION latest
 ENV CONDA_DIR $HOME/miniconda3
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-$MINICONDA_VERSION-Linux-x86_64.sh -O ~/miniconda.sh && \
     chmod +x ~/miniconda.sh && \
     sudo ~/miniconda.sh -b -p $CONDA_DIR && \
     sudo rm ~/miniconda.sh
-# make conda activate command available from /bin/bash --login shells
 ENV PATH=$CONDA_DIR/bin:$PATH
 RUN echo ". $CONDA_DIR/etc/profile.d/conda.sh" >> ~/.profile
-# make conda activate command available from /bin/bash --interative shells
-RUN conda update -n base -c defaults conda -y
+RUN conda init bash 
+
+WORKDIR $HOME/user
+
 
 # create conda environment
-RUN conda init bash \
-    && . ~/.bashrc \
-    && conda create -n aae_py37_tf26 python=3.9  \
+RUN conda create -n aae_py37_tf26 python=3.9  \
     && conda activate aae_py37_tf26 \
     && pip install --pre --upgrade PyOpenGL PyOpenGL_accelerate \
     && pip install cython \
@@ -58,8 +59,21 @@ RUN conda init bash \
     && pip install opencv-python
 
 
-USER user
-WORKDIR /home/user
+ENV PROJECT_DIR $HOME/user
+RUN mkdir -p $PROJECT_DIR
+RUN mkdir -p $HOME/user/Orientation_learning/
+COPY ./Orientation_learning/ $HOME/user/Orientation_learning/
+
+RUN conda activate aae_py37_tf26 \ 
+    && cd ~/user/Orientation_learning/AugmentedAutoencoder \
+    && pip install .
+
+# ENV AE_WORKSPACE_PATH /home/user/
+# RUN mkdir $AE_WORKSPACE_PATH \
+#     && cd $AE_WORKSPACE_PATH \
+#     && ae_init_workspace
+
+
 COPY ./entrypoint.sh /home/user/
 RUN sudo chmod u+x /home/user/entrypoint.sh
 ENTRYPOINT [ "/home/user/entrypoint.sh" ]
