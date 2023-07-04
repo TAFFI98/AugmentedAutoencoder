@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM nvidia/cuda:12.0.0-base-ubuntu22.04
 LABEL maintainer="taffi98.at@gmail.com"
 LABEL version="0.1"
 LABEL description="This is a docker immage for LfD thesis"
