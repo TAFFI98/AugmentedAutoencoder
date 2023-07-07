@@ -32,7 +32,7 @@ class Dataset(object):
         self.noof_obj_pixels = np.empty( (self.noof_training_imgs,), dtype= bool)
         self.train_y = np.empty( (self.noof_training_imgs,) + self.shape, dtype=np.uint8 )
         self.bg_imgs = np.empty( (self.noof_bg_imgs,) + self.shape, dtype=np.uint8 )
-        if np.float(eval(self._kw['realistic_occlusion'])):
+        if float(eval(self._kw['realistic_occlusion'])):
             self.random_syn_masks
 
 

@@ -1,82 +1,69 @@
-FROM nvidia/cuda:12.0.0-base-ubuntu22.04
+FROM tensorflow/tensorflow:latest-gpu
 LABEL maintainer="taffi98.at@gmail.com"
 LABEL version="0.1"
 LABEL description="This is a docker immage for LfD thesis"
 SHELL [ "/bin/bash", "--login", "-c" ]
+ENV HOME /home
+WORKDIR $HOME/user
+
+RUN apt-get update \
+  && apt-get install -y -qq --no-install-recommends \
+  apt-utils \
+     xauth \
+       build-essential \
+    mesa-utils \
+    libxext6 \
+    libx11-6 \
+    wget \
+    libglvnd0 \
+    libgl1 \
+    libglx0 \
+    libegl1 \
+    freeglut3-dev \
+  && rm -rf /var/lib/apt/lists/*
 
 # Set the nvidia container runtime.
-ENV NVIDIA_VISIBLE_DEVICES \
-    ${NVIDIA_VISIBLE_DEVICES:-all}
-ENV NVIDIA_DRIVER_CAPABILITIES \
-    ${NVIDIA_DRIVER_CAPABILITIES:+$NVIDIA_DRIVER_CAPABILITIES,}graphics
+ENV NVIDIA_VISIBLE_DEVICES all
+ENV NVIDIA_DRIVER_CAPABILITIES graphics,utility,compute
 
-RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
-ARG DEBIAN_FRONTEND=noninteractive
-# Install some handy tools.
-RUN set -x \
-        && apt-get update \
-        && apt-get upgrade -y \
-        && apt-get install -y apt-utils \
-        && apt-get install -y mesa-utils \
-        && apt-get install -y iputils-ping \
-        && apt-get install -y apt-transport-https ca-certificates \
-        && apt-get install -y openssh-server python3-pip exuberant-ctags \
-        && apt-get install -y git vim tmux nano htop sudo curl wget gnupg2 \
-        && apt-get install -y bash-completion \
-        && apt-get install -y python3-psycopg2 \
-        && apt-get install -y libglfw3-dev libglfw3 libassimp-dev   \
-        && pip3 install powerline-shell \
-        && rm -rf /var/lib/apt/lists/* \
-        && useradd -ms /bin/bash user \
-        && echo "user:user" | chpasswd && adduser user sudo \
-        && echo "user ALL=(ALL) NOPASSWD: ALL " >> /etc/sudoers
+RUN apt-get update \
+&& apt-get install -y libglfw3-dev libglfw3 libassimp-dev   
 
-# Install miniconda
-ENV HOME /home
+
+
+COPY env.yml /tmp/
+
+RUN chmod +x /tmp/env.yml 
+
+# ======== Install miniconda ========
 ENV MINICONDA_VERSION latest
 ENV CONDA_DIR $HOME/miniconda3
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-$MINICONDA_VERSION-Linux-x86_64.sh -O ~/miniconda.sh && \
     chmod +x ~/miniconda.sh && \
-    sudo ~/miniconda.sh -b -p $CONDA_DIR && \
-    sudo rm ~/miniconda.sh
+    ~/miniconda.sh -b -p $CONDA_DIR && \
+    rm ~/miniconda.sh
+
+# ========  make non-activate conda commands available ========
 ENV PATH=$CONDA_DIR/bin:$PATH
+# make conda activate command available from /bin/bash --login shells
 RUN echo ". $CONDA_DIR/etc/profile.d/conda.sh" >> ~/.profile
-RUN conda init bash 
+# make conda activate command available from /bin/bash --interative shells
+RUN conda init bash
+RUN conda env create -f /tmp/env.yml 
 
-WORKDIR $HOME/user
-
-
-# create conda environment
-RUN conda create -n aae_py37_tf26 python=3.9  \
-    && conda activate aae_py37_tf26 \
-    && pip install --pre --upgrade PyOpenGL PyOpenGL_accelerate \
-    && pip install cython \
-    && pip install cyglfw3 \
-    && pip install pyassimp==3.3 \
-    && pip install imgaug \
-    && pip install progressbar \
-    && pip install tensorflow==2.12.* \
-    && pip install opencv-python
-
-
-ENV PROJECT_DIR $HOME/user
-RUN mkdir -p $PROJECT_DIR
 RUN mkdir -p $HOME/user/Orientation_learning/
 COPY ./Orientation_learning/ $HOME/user/Orientation_learning/
 
-RUN conda activate aae_py37_tf26 \ 
-    && cd ~/user/Orientation_learning/AugmentedAutoencoder \
-    && pip install .
 
-# ENV AE_WORKSPACE_PATH /home/user/
-# RUN mkdir $AE_WORKSPACE_PATH \
-#     && cd $AE_WORKSPACE_PATH \
-#     && ae_init_workspace
+RUN /bin/bash -c "conda activate aae_py37_tf26 ; pip install cython ; pip install cyglfw3"
+
+RUN /bin/bash -c " cd /home/user/Orientation_learning/AugmentedAutoencoder ; pip install . ; export AE_WORKSPACE_PATH=\"/home/user/Orientation_learning/AugmentedAutoencoder/AAE_workspace\" ; echo $AE_WORKSPACE_PATH ; export PYOPENGL_PLATFORM='egl' "
+
+
+
 
 
 COPY ./entrypoint.sh /home/user/
-RUN sudo chmod u+x /home/user/entrypoint.sh
+RUN  chmod u+x /home/user/entrypoint.sh
 ENTRYPOINT [ "/home/user/entrypoint.sh" ]
-CMD sudo service ssh start && /bin/bash  
-STOPSIGNAL SIGTERM
 
