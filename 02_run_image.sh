@@ -12,6 +12,7 @@ docker run \
   --gpus all \
   --name lfd_desktop \
   -it \
+           -v /dev/video0:/dev/video0 \
            --volume=$XSOCK:$XSOCK:rw \
            --volume=$XAUTH:$XAUTH:rw \
            -v ./Orientation_learning:/home/user/Orientation_learning \
