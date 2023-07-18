@@ -55,13 +55,6 @@ RUN mkdir -p $HOME/user/Orientation_learning/
 COPY ./Orientation_learning/ $HOME/user/Orientation_learning/
 
 
-RUN /bin/bash -c "conda activate aae_py37_tf26 ; pip install cython ; pip install cyglfw3"
-
-RUN /bin/bash -c " cd /home/user/Orientation_learning/AugmentedAutoencoder ; pip install . ; export AE_WORKSPACE_PATH=\"/home/user/Orientation_learning/AugmentedAutoencoder/AAE_workspace\" ; echo $AE_WORKSPACE_PATH ; export PYOPENGL_PLATFORM='egl' "
-
-
-
-
 
 COPY ./entrypoint.sh /home/user/
 RUN  chmod u+x /home/user/entrypoint.sh
