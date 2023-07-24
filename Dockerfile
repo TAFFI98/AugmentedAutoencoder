@@ -32,12 +32,6 @@ RUN conda init bash
 RUN  mkdir -p $HOME/user/Orientation_learning/
 COPY ./Orientation_learning/ $HOME/user/Orientation_learning/
 
-WORKDIR $HOME/user/Orientation_learning/
-RUN conda env create -f env.yml 
-RUN conda activate aae_py37_tf26 
-RUN  conda install -c anaconda cython 
-RUN conda install -c conda-forge glfw 
-RUN conda install -c "conda-forge/label/cf202003" glfw 
-RUN pip install cyglfw3
+
 
 
