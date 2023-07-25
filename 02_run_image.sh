@@ -13,6 +13,8 @@ docker run \
   --name lfd_desktop \
   -it \
            -v /dev/video0:/dev/video0 \
+           -v /dev/video1:/dev/video1 \
+           -v /dev/media0:/dev/media0 \
            --volume=$XSOCK:$XSOCK:rw \
            --volume=$XAUTH:$XAUTH:rw \
            -v ./Orientation_learning:/home/user/Orientation_learning \

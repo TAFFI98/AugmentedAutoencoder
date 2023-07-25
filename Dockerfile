@@ -10,7 +10,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y software-properties-common ca-certificates wget\
   build-essential xauth apt-utils unzip git vim curl \
-  locate libglfw3-dev libglfw3 libassimp-dev qt5-default
+  locate libglfw3-dev libglfw3 libassimp-dev qt5-default v4l-utils usbutils
 
 
 ENV MINICONDA_VERSION latest
@@ -32,6 +32,8 @@ RUN conda init bash
 RUN  mkdir -p $HOME/user/Orientation_learning/
 COPY ./Orientation_learning/ $HOME/user/Orientation_learning/
 
+WORKDIR $HOME/user/Orientation_learning/
+RUN conda env create -f env.yml 
 
 
 
