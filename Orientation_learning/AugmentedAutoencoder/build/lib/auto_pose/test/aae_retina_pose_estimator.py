@@ -17,7 +17,7 @@ try:
     tf.disable_eager_execution()
 except:
     import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
+from keras.backend import set_session
 
 
 class AePoseEstimator:
@@ -32,8 +32,8 @@ class AePoseEstimator:
         workspace_path = os.environ.get('AE_WORKSPACE_PATH')
 
         if workspace_path == None:
-            print 'Please define a workspace path:\n'
-            print 'export AE_WORKSPACE_PATH=/path/to/workspace\n'
+            print('Please define a workspace path:\n')
+            print('export AE_WORKSPACE_PATH=/path/to/workspace\n')
             exit(-1)
 
         self._camPose = test_args.getboolean('CAMERA','camPose')
@@ -64,9 +64,7 @@ class AePoseEstimator:
 
         self.sess = tf.Session(config=config)
         set_session(self.sess)
-        self.detector = load_model(str(test_args.get('DETECTOR','detector_model_path')), 
-                            backbone_name=test_args.get('DETECTOR','backbone'))
-        #detector = self._load_model_with_nms(test_args)
+
 
 
 
@@ -77,7 +75,7 @@ class AePoseEstimator:
             log_dir = utils.get_log_dir(workspace_path,experiment_name,experiment_group)
             ckpt_dir = utils.get_checkpoint_dir(log_dir)
             train_cfg_file_path = utils.get_train_config_exp_file_path(log_dir, experiment_name)
-            print train_cfg_file_path
+            print(train_cfg_file_path)
             # train_cfg_file_path = utils.get_config_file_path(workspace_path, experiment_name, experiment_group)
             train_args = configparser.ConfigParser()
             train_args.read(train_cfg_file_path)
@@ -123,7 +121,7 @@ class AePoseEstimator:
 
         return scene_crop
 
-    def process_detection(self, color_img):
+    def process_detection(self, color_img, boxes, scores, labels):
 
         H, W = color_img.shape[:2]
 
@@ -131,10 +129,8 @@ class AePoseEstimator:
         res_image, scale = resize_image(pre_image)
 
         batch_image = np.expand_dims(res_image, axis=0)
-        print batch_image.shape
-        print batch_image.dtype
-        boxes, scores, labels = self.detector.predict_on_batch(batch_image)
-
+        print(batch_image.shape)
+        print(batch_image.dtype)
 
         valid_dets = np.where(scores[0] >= self.det_threshold)
 
@@ -236,7 +232,7 @@ class AePoseEstimator:
                 H_est[:3,3] = t_est
 
             H_est[:3,:3] = R_est
-            print 'translation from camera: ',  H_est[:3,3]
+            print('translation from camera: ',  H_est[:3,3])
 
             if self._camPose:
                 H_est = np.dot(camPose, H_est)           
@@ -252,8 +248,8 @@ class AePoseEstimator:
         """ This is mostly copied fomr retinanet.py """
 
         backbone_name = test_args.get('DETECTOR','backbone')
-        print backbone_name
-        print test_args.get('DETECTOR','detector_model_path')
+        print(backbone_name)
+        print(test_args.get('DETECTOR','detector_model_path'))
         model = keras.models.load_model(
                 str(test_args.get('DETECTOR','detector_model_path')),
                 custom_objects=backbone(backbone_name).custom_objects
@@ -266,11 +262,11 @@ class AePoseEstimator:
 
         # we expect the anchors, regression and classification values as first
         # output
-        print len(model.outputs)
+        print(len(model.outputs))
         regression     = model.outputs[0]
         classification = model.outputs[1]
-        print classification.shape[1]
-        print regression.shape
+        print(classification.shape[1])
+        print(regression.shape)
 
         # "other" can be any additional output from custom submodels,
         # by default this will be []

@@ -17,8 +17,8 @@ args = parser.parse_args()
 
 workspace_path = os.environ.get('AE_WORKSPACE_PATH')
 if workspace_path == None:
-    print 'Please define a workspace path:\n'
-    print 'export AE_WORKSPACE_PATH=/path/to/workspace\n'
+    print('Please define a workspace path:\n')
+    print ('export AE_WORKSPACE_PATH=/path/to/workspace\n')
     exit(-1)
 
 
@@ -75,7 +75,7 @@ while videoStream.isActive():
         for label,box,score in zip(labels,boxes,scores):
             box = box.astype(np.int32)
             xmin,ymin,xmax,ymax = box[0],box[1],box[0]+box[2],box[1]+box[3]
-            print label
+            print(label)
             cv2.putText(image_show, '%s : %1.3f' % (label,score), (xmin, ymax+20), cv2.FONT_ITALIC, .5, color_dict[int(label)], 2)
             cv2.rectangle(image_show,(xmin,ymin),(xmax,ymax),(255,0,0),2)
 

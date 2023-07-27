@@ -10,7 +10,7 @@ import os
 import time
 import argparse
 import configparser
-
+from aae_retina_pose_estimator import AePoseEstimator
 from auto_pose.ae import factory, utils
 
 

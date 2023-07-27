@@ -17,7 +17,7 @@ try:
     tf.disable_eager_execution()
 except:
     import tensorflow as tf
-from keras.backend.tensorflow_backend import set_session
+from keras.backend import set_session
 
 
 class AePoseEstimator:
@@ -32,28 +32,28 @@ class AePoseEstimator:
         workspace_path = os.environ.get('AE_WORKSPACE_PATH')
 
         if workspace_path == None:
-            print 'Please define a workspace path:\n'
-            print 'export AE_WORKSPACE_PATH=/path/to/workspace\n'
+            print('Please define a workspace path:\n')
+            print('export AE_WORKSPACE_PATH=/path/to/workspace\n')
             exit(-1)
 
         self._camPose = test_args.getboolean('CAMERA','camPose')
         self._camK = np.array(eval(test_args.get('CAMERA','K_test'))).reshape(3,3)
         self._width = test_args.getint('CAMERA','width')
         self._height = test_args.getint('CAMERA','height')
-        
-    
+        self.det_threshold = test_args.getfloat('DETECTOR','det_threshold')
+        self.class_names = eval(test_args.get('DETECTOR','class_names'))
 
         self._upright = test_args.getboolean('AAE','upright')
-        self.all_experiments = eval(test_args.get('AAE','experiments'))
+        self.all_experiments = eval(test_args.get('AAE','experiment'))
 
-        self.class_names = eval(test_args.get('DETECTOR','class_names'))
-        self.det_threshold = eval(test_args.get('DETECTOR','det_threshold'))
+
         self.icp = test_args.getboolean('ICP','icp')
 
         if self.icp:
             self._depth_scale = test_args.getfloat('DATA','depth_scale')
 
         self.all_codebooks = []
+        self.all_datasets = []
         self.all_train_args = []
         self.pad_factors = []
         self.patch_sizes = []
@@ -64,9 +64,7 @@ class AePoseEstimator:
 
         self.sess = tf.Session(config=config)
         set_session(self.sess)
-        self.detector = load_model(str(test_args.get('DETECTOR','detector_model_path')), 
-                            backbone_name=test_args.get('DETECTOR','backbone'))
-        #detector = self._load_model_with_nms(test_args)
+
 
 
 
@@ -77,15 +75,18 @@ class AePoseEstimator:
             log_dir = utils.get_log_dir(workspace_path,experiment_name,experiment_group)
             ckpt_dir = utils.get_checkpoint_dir(log_dir)
             train_cfg_file_path = utils.get_train_config_exp_file_path(log_dir, experiment_name)
-            print train_cfg_file_path
-            # train_cfg_file_path = utils.get_config_file_path(workspace_path, experiment_name, experiment_group)
+            print(train_cfg_file_path)
+            #train_cfg_file_path = utils.get_config_file_path(workspace_path, experiment_name, experiment_group)
+
             train_args = configparser.ConfigParser()
             train_args.read(train_cfg_file_path)
             self.all_train_args.append(train_args)
             self.pad_factors.append(train_args.getfloat('Dataset','PAD_FACTOR'))
             self.patch_sizes.append((train_args.getint('Dataset','W'), train_args.getint('Dataset','H')))
+            cd = factory.build_codebook_from_name(experiment_name, experiment_group, return_dataset=True)
+            self.all_codebooks.append(cd[0])
+            self.all_datasets.append(cd[1])
 
-            self.all_codebooks.append(factory.build_codebook_from_name(experiment_name, experiment_group, return_dataset=False))
             saver = tf.train.Saver(var_list=tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=experiment_name))
             factory.restore_checkpoint(self.sess, saver, ckpt_dir)
 
@@ -95,6 +96,8 @@ class AePoseEstimator:
             #     # currently works only for one object
             #     from auto_pose.icp import icp
             #     self.icp_handle = icp.ICP(train_args)
+
+
         if test_args.getboolean('ICP','icp'):
             from auto_pose.icp import icp
             self.icp_handle = icp.ICP(test_args, self.all_train_args)
@@ -106,10 +109,12 @@ class AePoseEstimator:
         size = int(np.maximum(h, w) * pad_factor)
 
         
-        left = np.maximum(x+w//2-size//2, 0)
-        right = x+w//2+size/2
-        top = np.maximum(y+h//2-size//2, 0)
-        bottom = y+h//2+size//2
+        left = int(np.maximum(x+w//2-size//2, 0))
+        right = int( x+w//2+size/2)
+        top =  int(np.maximum(y+h//2-size//2, 0))
+        bottom = int( y+h//2+size//2)
+        print(top,bottom, left,right)
+
 
         scene_crop = scene_img[top:bottom, left:right].copy()
 
@@ -123,26 +128,16 @@ class AePoseEstimator:
 
         return scene_crop
 
-    def process_detection(self, color_img):
+    def process_detection(self, color_img, boxes, scores, labels):
 
         H, W = color_img.shape[:2]
-
+        print(H,W)
         pre_image = preprocess_image(color_img)
         res_image, scale = resize_image(pre_image)
 
         batch_image = np.expand_dims(res_image, axis=0)
-        print batch_image.shape
-        print batch_image.dtype
-        boxes, scores, labels = self.detector.predict_on_batch(batch_image)
-
-
-        valid_dets = np.where(scores[0] >= self.det_threshold)
-
-        boxes /= scale
-
-        scores = scores[0][valid_dets]
-        boxes = boxes[0][valid_dets]
-        labels = labels[0][valid_dets]
+        print(batch_image.shape)
+        print(batch_image.dtype)
 
         filtered_boxes = []
         filtered_scores = []
@@ -162,6 +157,8 @@ class AePoseEstimator:
             filtered_boxes.append(bb_xywh)
             filtered_scores.append(score)
             filtered_labels.append(label)
+            print(filtered_boxes, filtered_scores, filtered_labels)
+
         return (filtered_boxes, filtered_scores, filtered_labels)
 
 
@@ -236,7 +233,7 @@ class AePoseEstimator:
                 H_est[:3,3] = t_est
 
             H_est[:3,:3] = R_est
-            print 'translation from camera: ',  H_est[:3,3]
+            print('translation from camera: ',  H_est[:3,3])
 
             if self._camPose:
                 H_est = np.dot(camPose, H_est)           
@@ -252,8 +249,8 @@ class AePoseEstimator:
         """ This is mostly copied fomr retinanet.py """
 
         backbone_name = test_args.get('DETECTOR','backbone')
-        print backbone_name
-        print test_args.get('DETECTOR','detector_model_path')
+        print(backbone_name)
+        print(test_args.get('DETECTOR','detector_model_path'))
         model = keras.models.load_model(
                 str(test_args.get('DETECTOR','detector_model_path')),
                 custom_objects=backbone(backbone_name).custom_objects
@@ -266,11 +263,11 @@ class AePoseEstimator:
 
         # we expect the anchors, regression and classification values as first
         # output
-        print len(model.outputs)
+        print(len(model.outputs))
         regression     = model.outputs[0]
         classification = model.outputs[1]
-        print classification.shape[1]
-        print regression.shape
+        print(classification.shape[1])
+        print(regression.shape)
 
         # "other" can be any additional output from custom submodels,
         # by default this will be []

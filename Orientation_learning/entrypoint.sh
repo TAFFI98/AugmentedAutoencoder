@@ -25,7 +25,6 @@ export PYOPENGL_PLATFORM='egl'
 [Paths]
 PLY_MODEL_PATH: /home/user/Orientation_learning/AugmentedAutoencoder/3D_model/manico_ASCII.PLY
 BACKGROUND_IMAGES_PATH: /home/user/Orientation_learning/AugmentedAutoencoder/background_images/*.jpg
-RETINANET_PATH: /home/user/Orientation_learning/AugmentedAutoencoder/keras-retinanet/snapshots/resnet50_csv_50_inference.h5
 
 # Create dataset
 ae_train exp_group/my_autoencoder -d
@@ -35,20 +34,19 @@ ae_train exp_group/my_autoencoder
 ae_embed exp_group/my_autoencoder
 # Test on test images
 python /home/user/Orientation_learning/AugmentedAutoencoder/auto_pose/test/aae_image.py exp_group/my_autoencoder -f /home/user/Orientation_learning/AugmentedAutoencoder/test_images_tool/ 
-# Test on webcam       
-python /home/user/Orientation_learning/AugmentedAutoencoder/auto_pose/test/aae_webcam.py exp_group/my_autoencoder                                          
-# Test on ZED
-python /home/user/Orientation_learning/AugmentedAutoencoder/auto_pose/test/aae_webcam_ZED.py exp_group/my_autoencoder                                           
-# Test on webcam with Retinanet
-python /home/user/Orientation_learning/AugmentedAutoencoder/auto_pose/test/aae_retina_webcam_pose_ZED.py -test_config aae_retina_webcam.cfg -vis 
 
-python aae_retina_webcam_pose_ZED.py -test_config aae_retina_webcam.cfg -vis 
 
 # TRAIN RETINANET
+cd /home/user/Orientation_learning/AugmentedAutoencoder/
+git clone https://github.com/fizyr/keras-retinanet.git
 cd /home/user/Orientation_learning/AugmentedAutoencoder/keras-retinanet
 conda activate aae_py37_tf26
 pip install . 
-retinanet-train  --epochs 50 --batch-size  2 --steps 64 csv /home/user/Orientation_learning/AugmentedAutoencoder/keras-retinanet/examples/dataset/annotations.csv /home/user/Orientation_learning/AugmentedAutoencoder/keras-retinanet/examples/dataset/classes.csv --val-annotations /home/user/Orientation_learning/AugmentedAutoencoder/keras-retinanet/examples/dataset/annotations_val.csv 
-
-
+#train
+retinanet-train  --epochs 50 --batch-size  2 --steps 64 csv /home/user/Orientation_learning/Tool\ Finder.retinanet/train/annotations_train.csv /home/user/Orientation_learning/Tool\ Finder.retinanet/classes.csv --val-annotations /home/user/Orientation_learning/Tool\ Finder.retinanet/valid/annotations_val.csv
+#convert model
+retinanet-convert-model /home/user/Orientation_learning/AugmentedAutoencoder/keras-retinanet/snapshots/resnet50_csv_13.h5 /home/user/Orientation_learning/AugmentedAutoencoder/keras-retinanet/snapshots/resnet50_csv_13_inference.h5
+#test detector on image and save bbox
 python /home/user/Orientation_learning/AugmentedAutoencoder/keras-retinanet/examples/resnet50_retinanet.py
+#TEST POSE ESTIMATION WITH RETINA
+python /home/user/Orientation_learning/AugmentedAutoencoder/auto_pose/test/aae_image_RETINA.py  -test_config /home/user/Orientation_learning/AugmentedAutoencoder/auto_pose/ae/cfg_eval/aae_retina_webcam.cfg -f /home/user/Orientation_learning/AugmentedAutoencoder/test_images_tool/

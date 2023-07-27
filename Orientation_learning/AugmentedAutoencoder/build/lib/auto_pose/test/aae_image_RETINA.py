@@ -12,7 +12,7 @@ import argparse
 import configparser
 from aae_retina_pose_estimator import AePoseEstimator
 from auto_pose.ae import factory, utils
-
+import pathlib
 
 
 parser = argparse.ArgumentParser()
@@ -27,8 +27,10 @@ experiment_group = full_name.pop() if len(full_name) > 0 else ''
 file_str = arguments.file_str
 if os.path.isdir(file_str):
     files = sorted(glob.glob(os.path.join(str(file_str),'*.png'))+glob.glob(os.path.join(str(file_str),'*.jpg')))
+    bboxes = sorted(glob.glob(os.path.join(str(file_str)+'bboxes/','*.txt')))
 else:
     files = [file_str]
+    bboxes = [pathlib.Path(file_str).parents[0] + pathlib.Path(file_str).stem +'.txt']
 
 workspace_path = os.environ.get('AE_WORKSPACE_PATH')
 if workspace_path == None:
